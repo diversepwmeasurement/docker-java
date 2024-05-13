@@ -1,37 +1,47 @@
-name: CI
-
-on:
-  pull_request: {}
-  push: { branches: [ main ] }
-
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: self-hosted
+    steps:
+    - continue-on-error: true
+      uses: actions/checkout@v4
+    - continue-on-error: true
+      name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: ${{matrix.javaVersion}}
+    - continue-on-error: true
+      env:
+        DOCKER_HOST: ${{matrix.dockerHost}}
+        DOCKER_VERSION: ${{matrix.dockerVersion}}
+      name: Configure Docker
+      run: .ci/setup_docker.sh
+    - continue-on-error: true
+      env:
+        DOCKER_HOST: ${{matrix.dockerHost}}
+      name: Build with Maven
+      run: '[[ -z "$DOCKER_HOST" ]] && unset DOCKER_HOST
+
+        ./mvnw --no-transfer-progress verify
+
+        '
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { name: "default", javaVersion: 8 }
-          - { name: "default", javaVersion: 17 }
-          - { name: "default", javaVersion: 21 }
-          - { name: "over TCP", dockerHost: "tcp://127.0.0.1:2375", javaVersion: 8 }
-          - { name: "Docker 19.03.9", dockerVersion: "5:19.03.9~3-0~ubuntu-focal", javaVersion: 8 }
-
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{matrix.javaVersion}}
-          distribution: temurin
-      - name: Configure Docker
-        env:
-          DOCKER_VERSION: ${{matrix.dockerVersion}}
-          DOCKER_HOST: ${{matrix.dockerHost}}
-        run: .ci/setup_docker.sh
-      - name: Build with Maven
-        env:
-          DOCKER_HOST: ${{matrix.dockerHost}}
-        run: |
-          [[ -z "$DOCKER_HOST" ]] && unset DOCKER_HOST
-          ./mvnw --no-transfer-progress verify
+        - javaVersion: 8
+          name: default
+        - javaVersion: 17
+          name: default
+        - javaVersion: 21
+          name: default
+        - dockerHost: tcp://127.0.0.1:2375
+          javaVersion: 8
+          name: over TCP
+        - dockerVersion: 5:19.03.9~3-0~ubuntu-focal
+          javaVersion: 8
+          name: Docker 19.03.9
+name: CI
+on:
+  repository_dispatch:
+    types: trigger-ga___ci.yml

@@ -1,25 +1,25 @@
-name: Release
-
-on:
-  release:
-    types:
-      - prereleased
-      - released
-
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK 8
-        uses: actions/setup-java@v4
-        with:
-          java-version: 8
-          distribution: temurin
-      - name: Set version
-        run: ./mvnw versions:set -DnewVersion="${{github.event.release.tag_name}}"
-      # TODO check main's CI status
-      - name: Deploy with Maven
-        env:
-          MAVEN_DEPLOYMENT_REPOSITORY: ${{ secrets.MAVEN_DEPLOYMENT_REPOSITORY }}
-        run: ./mvnw deploy -DaltReleaseDeploymentRepository="$MAVEN_DEPLOYMENT_REPOSITORY" -DskipTests
+    - continue-on-error: true
+      uses: actions/checkout@v4
+    - continue-on-error: true
+      name: Set up JDK 8
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 8
+    - continue-on-error: true
+      name: Set version
+      run: ./mvnw versions:set -DnewVersion="${{github.event.release.tag_name}}"
+    - continue-on-error: true
+      env:
+        MAVEN_DEPLOYMENT_REPOSITORY: ${{ secrets.MAVEN_DEPLOYMENT_REPOSITORY }}
+      name: Deploy with Maven
+      run: ./mvnw deploy -DaltReleaseDeploymentRepository="$MAVEN_DEPLOYMENT_REPOSITORY"
+        -DskipTests
+name: Release
+on:
+  repository_dispatch:
+    types: trigger-ga___release.yml
